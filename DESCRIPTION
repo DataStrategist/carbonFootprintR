@@ -20,3 +20,5 @@ Imports:
     purrr,
     stringr,
     tidyr
+URL: https://github.com/DataStrategist/carbonFootprintR
+BugReports: https://github.com/DataStrategist/carbonFootprintR/issues
