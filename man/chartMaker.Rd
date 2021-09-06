@@ -4,8 +4,14 @@
 \alias{chartMaker}
 \title{chartMaker}
 \usage{
-chartMaker(lat_destiantion, lon_destination, lat_origin, lon_origin,
-  color = "f2f2f2", lwd = 0.8)
+chartMaker(
+  lat_destiantion,
+  lon_destination,
+  lat_origin,
+  lon_origin,
+  color = "f2f2f2",
+  lwd = 0.8
+)
 }
 \arguments{
 \item{lat_destiantion}{latitude of destination}
@@ -36,8 +42,4 @@ if(interactive()){
  #EXAMPLE1
  }
 }
-}
-\seealso{
-\code{\link[maps]{map}}
- \code{\link[geosphere]{gcIntermediate}}
 }

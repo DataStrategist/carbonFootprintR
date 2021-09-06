@@ -1,0 +1,29 @@
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+# carbonFootprintR
+
+<!-- badges: start -->
+
+[![Lifecycle:
+experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://www.tidyverse.org/lifecycle/#experimental)
+[![CRAN
+status](https://www.r-pkg.org/badges/version/carbonFootprintR)](https://CRAN.R-project.org/package=carbonFootprintR)
+<!-- badges: end -->
+
+The goal of carbonFootprintR is to calculate the carbon footprint of an
+event.
+
+## Installation
+
+You can install the development version from
+[GitHub](https://github.com/) with:
+
+``` r
+# install.packages("devtools")
+devtools::install_github("DataStrategist/carbonFootprintR")
+```
+
+## Example
+
+This repo is a work in progress, but check the vignette!

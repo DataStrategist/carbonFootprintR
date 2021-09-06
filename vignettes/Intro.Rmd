@@ -1,0 +1,68 @@
+---
+title: "Intro"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Intro}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(carbonFootprintR)
+library(tidyverse)
+```
+
+This vignette serves as an example on how to use the various functions in this package.
+
+For the purposes of this example we will use the data set included in this package called `invite_locations_list`.But since the data set is a data frame we will first have to convert this into a character vector.
+
+Let's load that into memory using the command `pull`.
+```{r}
+locations <- invite_locations_list %>% pull
+```
+
+Next, let's add in the latitude (lat) and longitude(lon) for our people. In order to accomplish this, we will use the `coordinateGetter` function, which uses an openstreetmap API service. For the purposes of this vignette, I will use my account key, but you please get your own free key at https://developer.mapquest.com https://opencagedata.com/pricing.
+
+```{r}
+returnDF <- coordinateGetter(address = head(locations), osmKey = "QkAXkFcY9Yo5DUulr92JObQ09ym7RPv4")
+```
+
+## and now map to nearest airports
+withAirports <- airportMatcher(returnDF)
+
+## and now plot those vs London
+df1 <- returnDF %>% select(lon, lat) %>% na.exclude(.)
+
+chartMaker(lat1 = rep(51.1638229, nrow(df1)),
+           lon1 = rep(0.1312621, nrow(df1)),
+           lat2 = df1$lat,
+           lon2 = df1$lon,
+           color = "purple",
+           lwd = 0.8)
+
+## and get the footprint
+# footprintGetter(from = "FNL", to = "LHR", class = "economy", API = "d29a6f1481b5365611fb708d")
+
+withAirports$airport %>% map(~safely(footprintGetter)(from = .x, to = "LHR", 
+                             class = "economy", API = "d29a6f1481b5365611fb708d")) -> footprints
+footprints %>% map("error")
+
+footprints %>% map_dfr("result") %>% summarize(cost = sum(cost_sek))
+
+allFlights <- footprints %>% map_dfr("result") %>% 
+  select(from, to) %>% unite(both, from, to, sep = "%2C") %>% 
+  bind_cols(footprints %>% map_dfr("result") %>% 
+              select(from, to) %>% unite(both, to, from, sep = "%2C")) %>% 
+  unlist %>% paste(collapse = "%2C")
+
+paste0("https://www.goclimateneutral.org/flight_offsets/new?offset_params=economy%2C", 
+       allFlights, '&locale="en"') %>% cat
+
+  https://api.exchangeratesapi.io/latest?symbols=USD,GBP

@@ -1,5 +1,48 @@
 ### functions file
 
+# coordinateGetter --------------------------------------------------------
+
+#' @title coordinateGetter
+#' @description takes an address and returns the coordinates of that point
+#' @param address physical address. Works best in this format: 13 Elm Street, Amityville, State, Country. It's most important to get the two last points correct, so either City, Country, or State, Country (since that will give us decent granularity to find the nearest airport)
+#' @param osmKey To access the openstreetmap API you need a valid API key. You can get it for free at https://developer.mapquest.com
+#' @return returns a data frame of the address, its latitude and its longitude
+#' @details since we are using the free api with geocode, the matching is approximate, but good enough for our purposes.
+#' @examples
+#' \dontrun{
+#' if(interactive()){
+#'  library(purrr);library(magrittr)
+#'  addresses <- c("9th Street, Troy, NY, USA", "The Mall, Solan, Himachal Pradesh, India")
+#'  purrr::map_dfr(addresses, ~coordinateGetter(.))
+#'
+#'  }
+#' }
+#' @seealso
+#'  \code{\link[ggmap]{geocode}}
+#' @rdname coordinateGetter
+#' @export
+#' @importFrom ggmap geocode
+#' @importFrom dplyr select bind_cols
+#' @importFrom nominatim osm_search NOMINATIM.DELAY
+coordinateGetter <- function(address, osmKey){
+  address <- as.character(address)
+  ## get API responses
+  options(NOMINATIM.DELAY=0.5)
+  locs <- nominatim::osm_search(query = address, key = osmKey)
+
+  returnDF <- bind_cols(address = address,locs) %>% select(address, lat, lon)
+
+  # ## sometimes it doesn't get them all, so fix that but only 3 times
+  # for (i in 1:3){
+  #   if(any(is.na(returnDF$location))){
+  #     smallGeo <- returnDF %>% filter(is.na(location)) %>% pull %>% geocode
+  #     smallDF <- tibble(address = returnDF %>% filter(is.na(location)) %>% pull(address),
+  #                       location = smallGeo)
+  #     returnDF <- left_join(returnDF, smallDF, by = "address")
+  #   }
+  # }
+  return(returnDF)
+}
 
 # API call ----------------------------------------------------------------
 
@@ -87,12 +130,8 @@ footprintGetter <- function(from, to, connections = NULL, class = "economy", API
 #'  #EXAMPLE1
 #'  }
 #' }
-#' @seealso
-#'  \code{\link[maps]{map}}
-#'  \code{\link[geosphere]{gcIntermediate}}
 #' @rdname chartMaker
 #' @export
-#' @importFrom maps map
 #' @importFrom geosphere gcIntermediate
 chartMaker <- function(lat_destiantion, lon_destination, lat_origin,
                        lon_origin, color = "f2f2f2", lwd = 0.8){
@@ -105,49 +144,6 @@ chartMaker <- function(lat_destiantion, lon_destination, lat_origin,
     inter <- geosphere::gcIntermediate(c(lon_destination[i], lat_destiantion[i]), c(lon_origin[i], lat_origin[i]), n=100, addStartEnd=TRUE)
     lines(inter, col= color, lwd = lwd)
   }
-}
-
-
-# coordinateGetter --------------------------------------------------------
-
-#' @title coordinateGetter
-#' @description takes an address and returns the coordinates of that point
-#' @param address physical address. Works best in this format: 13 Elm Street, Amityville, State, Country. It's most important to get the two last points correct, so either City, Country, or State, Country (since that will give us decent granularity to find the nearest airport)
-#' @return returns a data frame of the address, its latitude and its longitude
-#' @details since we are using the free api with geocode, the matching is approximate, but good enough for our purposes.
-#' @examples
-#' \dontrun{
-#' if(interactive()){
-#'  library(purrr);library(magrittr)
-#'  addresses <- c("9th Street, Troy, NY, USA", "The Mall, Solan, Himachal Pradesh, India")
-#'  purrr::map_dfr(addresses, ~coordinateGetter(.))
-#'
-#'  }
-#' }
-#' @seealso
-#'  \code{\link[ggmap]{geocode}}
-#' @rdname coordinateGetter
-#' @export
-#' @importFrom ggmap geocode
-#' @importFrom dplyr select bind_cols
-coordinateGetter <- function(address){
-  # browser()
-  ## get addresses
-  Locs <- ggmap::geocode(address, source = "dsk")
-  ## combine addresses and coordinates
-  returnDF <- bind_cols(address = address,
-         location = Locs) %>% select(address, lat, lon)
-
-  # ## sometimes it doesn't get them all, so fix that but only 3 times
-  # for (i in 1:3){
-  #   if(any(is.na(returnDF$location))){
-  #     smallGeo <- returnDF %>% filter(is.na(location)) %>% pull %>% geocode
-  #     smallDF <- tibble(address = returnDF %>% filter(is.na(location)) %>% pull(address),
-  #                       location = smallGeo)
-  #     returnDF <- left_join(returnDF, smallDF, by = "address")
-  #   }
-  # }
-  return(returnDF)
 }
 
 
@@ -172,7 +168,6 @@ coordinateGetter <- function(address){
 #'  \code{\link[geosphere]{distm}}
 #' @rdname airportMatcher
 #' @importFrom geosphere distm
-#' @import purrr
 #' @importFrom dplyr select left_join right_join filter
 #' @importFrom utils read.csv
 #' @importFrom stats na.exclude
@@ -186,7 +181,7 @@ airportMatcher <- function(returnDF, dataSet = "openFlights"){
         select(5, 7, 8) %>% set_names(c("code", "lat_airport", "lon_airport")) %>%
         na.exclude() %>% filter(!grepl(pattern = "\\\\", code)) -> airports
     } else{
-      read.csv("data/airport-codes_csv.csv")  -> airports
+      airports <- world_airports
       airports %>%
         select(iata_code, coordinates) %>%
         separate(coordinates, c("1","2"), sep = ", ") %>% as_tibble %>%
@@ -203,7 +198,7 @@ airportMatcher <- function(returnDF, dataSet = "openFlights"){
   airports$code -> colnames(distances)
   returnDF_small$address -> row.names(distances)
 
-  array_branch(distances, 1) %>% purrr::map(~which.min(.x)) %>% map_chr(names) -> nearestAirport
+  array_branch(distances, 1) %>% purrr::map(~which.min(.x)) %>% purrr::map_chr(names) -> nearestAirport
   array_branch(distances, 1) %>% purrr::map_dbl(~min(.x)) -> nearestDistance
   returnDF_small %>% mutate(airport = nearestAirport %>% unname,
                       dist_km = nearestDistance/1000 %>% unname) -> returnDF_small

@@ -4,10 +4,12 @@
 \alias{coordinateGetter}
 \title{coordinateGetter}
 \usage{
-coordinateGetter(address)
+coordinateGetter(address, key)
 }
 \arguments{
 \item{address}{physical address. Works best in this format: 13 Elm Street, Amityville, State, Country. It's most important to get the two last points correct, so either City, Country, or State, Country (since that will give us decent granularity to find the nearest airport)}
+
+\item{key}{To access the openstreetmap API you need a valid API key. You can get it for free at https://developer.mapquest.com}
 }
 \value{
 returns a data frame of the address, its latitude and its longitude
